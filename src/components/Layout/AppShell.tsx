@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { DashboardModule } from '../modules/Dashboard/DashboardModule';
@@ -8,7 +8,9 @@ import { InvoicingModule } from '../modules/Invoicing/InvoicingModule';
 import { PayrollModule } from '../modules/Payroll/PayrollModule';
 import { ReportsModule } from '../modules/Reports/ReportsModule';
 import { SettingsModule } from '../modules/Settings/SettingsModule';
+import { ChangePasswordModal } from '../Auth/ChangePasswordModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { isTauri } from '../../lib/invoke';
 
 type Module = 'dashboard' | 'receipts' | 'bills' | 'invoicing' | 'payroll' | 'reports' | 'settings';
 
@@ -26,6 +28,14 @@ export function AppShell() {
   const { user } = useAuth();
   const [activeModule, setActiveModule] = useState<Module>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+
+  useEffect(() => {
+    if (user && user.username === 'admin' && isTauri()) {
+      const timer = setTimeout(() => setShowPasswordPrompt(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   // Route protection: redirect to allowed module if current not allowed
   const getDefaultForRole = (): Module => {
@@ -65,6 +75,7 @@ export function AppShell() {
           {renderModule()}
         </main>
       </div>
+      {showPasswordPrompt && <ChangePasswordModal onClose={() => setShowPasswordPrompt(false)} />}
     </div>
   );
 }

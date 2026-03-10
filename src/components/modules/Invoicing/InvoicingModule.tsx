@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileText, X, AlertCircle, CheckCircle, Clock, Download, Send } from 'lucide-react';
-import { mockInvoices, mockOrganization } from '../../../data/mockData';
+import { Plus, FileText, X, AlertCircle, CheckCircle, Clock, Download, Send, Loader2 } from 'lucide-react';
+import { invoke } from '../../../lib/invoke';
 import type { Invoice, InvoiceStatus, InvoiceLineItem } from '../../../types';
 import clsx from 'clsx';
 
@@ -105,7 +105,7 @@ function InvoiceDetail({ invoice, onClose, onMarkPaid }: InvoiceDetailProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {invoice.lineItems.map(item => (
+                  {invoice.items.map(item => (
                     <tr key={item.id}>
                       <td className="px-4 py-2.5 text-gray-900 dark:text-white">{item.description}</td>
                       <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400">{item.quantity} {item.unit}</td>
@@ -197,16 +197,26 @@ function InvoiceDetail({ invoice, onClose, onMarkPaid }: InvoiceDetailProps) {
 
 export function InvoicingModule() {
   const { t } = useTranslation();
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
+  useEffect(() => {
+    invoke<Invoice[]>('get_invoices').then(data => {
+      setInvoices(data ?? []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
   const handleMarkPaid = (id: string) => {
-    setInvoices(prev => prev.map(inv => inv.id === id ? {
-      ...inv,
-      status: 'oplacona' as InvoiceStatus,
-      paidDate: new Date().toISOString().split('T')[0],
-    } : inv));
+    invoke('mark_invoice_paid', { id, paid_date: new Date().toISOString().split('T')[0] }).then(() => {
+      setInvoices(prev => prev.map(inv => inv.id === id ? {
+        ...inv,
+        status: 'oplacona' as InvoiceStatus,
+        paidDate: new Date().toISOString().split('T')[0],
+      } : inv));
+    });
   };
 
   const filtered = filterStatus === 'all' ? invoices : invoices.filter(inv => inv.status === filterStatus);
@@ -268,7 +278,13 @@ export function InvoicingModule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {filtered.map(invoice => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                  </td>
+                </tr>
+              ) : filtered.map(invoice => (
                 <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="px-5 py-3">
                     <p className="text-sm font-mono font-medium text-blue-600 dark:text-blue-400">{invoice.number}</p>

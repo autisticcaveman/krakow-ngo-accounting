@@ -412,7 +412,7 @@ export const mockInvoices: Invoice[] = [
       city: 'Kraków',
       postalCode: '31-004',
     },
-    lineItems: [
+    items: [
       {
         id: 'li1',
         description: 'Realizacja programu wsparcia społecznego - Q1 2026',
@@ -456,7 +456,7 @@ export const mockInvoices: Invoice[] = [
       city: 'Nowy Sącz',
       postalCode: '33-300',
     },
-    lineItems: [
+    items: [
       {
         id: 'li2',
         description: 'Warsztaty integracyjne dla seniorów - 2 dni',
@@ -511,7 +511,7 @@ export const mockInvoices: Invoice[] = [
       city: 'Kraków',
       postalCode: '30-529',
     },
-    lineItems: [
+    items: [
       {
         id: 'li4',
         description: 'Koordynacja wolontariatu - luty 2026',
@@ -554,7 +554,7 @@ export const mockInvoices: Invoice[] = [
       city: 'Potsdam',
       postalCode: '14467',
     },
-    lineItems: [
+    items: [
       {
         id: 'li5',
         description: 'Organizacja wymiany młodzieżowej - Kraków 2026',

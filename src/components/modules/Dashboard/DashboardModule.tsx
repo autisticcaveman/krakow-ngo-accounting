@@ -1,12 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, Tooltip as PieTooltip,
 } from 'recharts';
 import { TrendingUp, TrendingDown, Minus, Wallet, Receipt, FileText, CreditCard } from 'lucide-react';
-import { mockMonthlyData, mockExpensePieData, mockTransactions } from '../../../data/mockData';
+import { invoke } from '../../../lib/invoke';
 import clsx from 'clsx';
+
+interface DashboardData {
+  monthly: Array<{ month: string; income: number; expenses: number; balance: number }>;
+  pie: Array<{ name: string; value: number; color: string }>;
+  transactions: Array<{ id: string; date: string; description: string; vendor: string; amount: number; type: string; category: string; status: string }>;
+  total_income_ytd: number;
+  total_expenses_ytd: number;
+  pending_receipts: number;
+  overdue_bills: number;
+}
 
 function formatPLN(amount: number) {
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(amount);
@@ -63,11 +73,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function DashboardModule() {
   const { t } = useTranslation();
+  const [data, setData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    invoke<DashboardData>('get_dashboard_data').then(d => setData(d)).catch(() => {});
+  }, []);
 
   const summaryCards = [
     {
       title: t('dashboard.income'),
-      value: 35800,
+      value: data?.total_income_ytd ?? 0,
       change: 14.7,
       icon: TrendingUp,
       color: 'bg-emerald-500',
@@ -75,7 +90,7 @@ export function DashboardModule() {
     },
     {
       title: t('dashboard.expenses'),
-      value: 26300,
+      value: data?.total_expenses_ytd ?? 0,
       change: -6.1,
       icon: CreditCard,
       color: 'bg-red-500',
@@ -83,7 +98,7 @@ export function DashboardModule() {
     },
     {
       title: t('dashboard.balance'),
-      value: 78420,
+      value: (data?.total_income_ytd ?? 0) - (data?.total_expenses_ytd ?? 0),
       change: 8.3,
       icon: Wallet,
       color: 'bg-blue-500',
@@ -91,11 +106,11 @@ export function DashboardModule() {
     },
     {
       title: t('dashboard.pendingInvoices'),
-      value: 22972.50,
+      value: data?.pending_receipts ?? 0,
       change: 0,
       icon: FileText,
       color: 'bg-amber-500',
-      subtitle: '3 faktury wystawione',
+      subtitle: `${data?.overdue_bills ?? 0} przeterminowanych`,
     },
   ];
 
@@ -114,7 +129,7 @@ export function DashboardModule() {
         <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.cashFlow')}</h3>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={mockMonthlyData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <LineChart data={data?.monthly ?? []} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -155,7 +170,7 @@ export function DashboardModule() {
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
-                data={mockExpensePieData}
+                data={data?.pie ?? []}
                 cx="50%"
                 cy="50%"
                 innerRadius={45}
@@ -163,7 +178,7 @@ export function DashboardModule() {
                 paddingAngle={2}
                 dataKey="value"
               >
-                {mockExpensePieData.map((entry, i) => (
+                {(data?.pie ?? []).map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
@@ -171,7 +186,7 @@ export function DashboardModule() {
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-2 space-y-1.5">
-            {mockExpensePieData.map((entry, i) => (
+            {(data?.pie ?? []).map((entry, i) => (
               <div key={i} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
@@ -201,7 +216,7 @@ export function DashboardModule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {mockTransactions.map(tx => (
+              {(data?.transactions ?? []).map(tx => (
                 <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{tx.date}</td>
                   <td className="px-3 py-3 text-sm text-gray-900 dark:text-white max-w-xs">

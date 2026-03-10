@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, ChevronDown, X, FileText, Printer } from 'lucide-react';
-import { mockEmployees, calculatePayslip, ZUS_RATES, PIT_RATES } from '../../../data/mockData';
+import { Users, ChevronDown, X, FileText, Printer, Loader2 } from 'lucide-react';
+import { invoke } from '../../../lib/invoke';
 import type { Employee, Payslip } from '../../../types';
+
+const ZUS_RATES_DISPLAY = {
+  emerytalne_pracownik: 0.0976,
+  rentowe_pracownik: 0.015,
+  chorobowe: 0.0245,
+  emerytalne_pracodawca: 0.0976,
+  rentowe_pracodawca: 0.065,
+  wypadkowe: 0.0167,
+  fp: 0.0245,
+  fgsp: 0.001,
+};
 import clsx from 'clsx';
 
 function formatPLN(amount: number) {
@@ -22,15 +33,16 @@ interface PayslipModalProps {
 function PayslipModal({ payslip, onClose }: PayslipModalProps) {
   const { t } = useTranslation();
   const emp = payslip.employee;
+  if (!emp) return null;
   const [month, year] = payslip.month.split('-');
   const monthName = MONTHS_PL[parseInt(month) - 1];
 
   const rows = [
     { label: 'Wynagrodzenie zasadnicze brutto', value: payslip.grossSalary, bold: true },
     { label: '', value: null, divider: true },
-    { label: `Emerytalne pracownik (${(ZUS_RATES.emerytalne_pracownik * 100).toFixed(2)}%)`, value: -payslip.zus.emerytalne_pracownik },
-    { label: `Rentowe pracownik (${(ZUS_RATES.rentowe_pracownik * 100).toFixed(2)}%)`, value: -payslip.zus.rentowe_pracownik },
-    { label: `Chorobowe (${(ZUS_RATES.chorobowe * 100).toFixed(2)}%)`, value: -payslip.zus.chorobowe_pracownik },
+    { label: `Emerytalne pracownik (${(ZUS_RATES_DISPLAY.emerytalne_pracownik * 100).toFixed(2)}%)`, value: -payslip.zus.emerytalne_pracownik },
+    { label: `Rentowe pracownik (${(ZUS_RATES_DISPLAY.rentowe_pracownik * 100).toFixed(2)}%)`, value: -payslip.zus.rentowe_pracownik },
+    { label: `Chorobowe (${(ZUS_RATES_DISPLAY.chorobowe * 100).toFixed(2)}%)`, value: -payslip.zus.chorobowe_pracownik },
     { label: `Ubezpieczenie zdrowotne (9%)`, value: -payslip.zus.zdrowotne },
     { label: '', value: null, divider: true },
     { label: 'Podstawa opodatkowania', value: payslip.taxBase },
@@ -42,11 +54,11 @@ function PayslipModal({ payslip, onClose }: PayslipModalProps) {
   ];
 
   const employerRows = [
-    { label: `Emerytalne pracodawca (${(ZUS_RATES.emerytalne_pracodawca * 100).toFixed(2)}%)`, value: payslip.zus.emerytalne_pracodawca },
-    { label: `Rentowe pracodawca (${(ZUS_RATES.rentowe_pracodawca * 100).toFixed(2)}%)`, value: payslip.zus.rentowe_pracodawca },
-    { label: `Wypadkowe (${(ZUS_RATES.wypadkowe * 100).toFixed(2)}%)`, value: payslip.zus.wypadkowe },
-    { label: `Fundusz Pracy (${(ZUS_RATES.fp * 100).toFixed(2)}%)`, value: payslip.zus.fp },
-    { label: `FGŚP (${(ZUS_RATES.fgsp * 100).toFixed(2)}%)`, value: payslip.zus.fgsp },
+    { label: `Emerytalne pracodawca (${(ZUS_RATES_DISPLAY.emerytalne_pracodawca * 100).toFixed(2)}%)`, value: payslip.zus.emerytalne_pracodawca },
+    { label: `Rentowe pracodawca (${(ZUS_RATES_DISPLAY.rentowe_pracodawca * 100).toFixed(2)}%)`, value: payslip.zus.rentowe_pracodawca },
+    { label: `Wypadkowe (${(ZUS_RATES_DISPLAY.wypadkowe * 100).toFixed(2)}%)`, value: payslip.zus.wypadkowe },
+    { label: `Fundusz Pracy (${(ZUS_RATES_DISPLAY.fp * 100).toFixed(2)}%)`, value: payslip.zus.fp },
+    { label: `FGŚP (${(ZUS_RATES_DISPLAY.fgsp * 100).toFixed(2)}%)`, value: payslip.zus.fgsp },
   ];
 
   return (
@@ -146,10 +158,16 @@ export function PayrollModule() {
   const { t } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState('2026-03');
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const payslips = mockEmployees
-    .filter(e => e.active)
-    .map(e => calculatePayslip(e, selectedMonth));
+  useEffect(() => {
+    setLoading(true);
+    invoke<Payslip[]>('get_payslips', { month: selectedMonth }).then(data => {
+      setPayslips(data ?? []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [selectedMonth]);
 
   const totalGross = payslips.reduce((s, p) => s + p.grossSalary, 0);
   const totalNet = payslips.reduce((s, p) => s + p.netSalary, 0);
@@ -176,7 +194,21 @@ export function PayrollModule() {
             className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+        <button
+          onClick={async () => {
+            for (const p of payslips) {
+              if (p.employee) {
+                await invoke('generate_payslip', { employee_id: p.employee.id, month: selectedMonth });
+              }
+            }
+            setLoading(true);
+            invoke<Payslip[]>('get_payslips', { month: selectedMonth }).then(data => {
+              setPayslips(data ?? []);
+              setLoading(false);
+            }).catch(() => setLoading(false));
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
           <FileText className="w-4 h-4" />
           {t('payroll.generatePayslips')}
         </button>
@@ -257,8 +289,15 @@ export function PayrollModule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {payslips.map(payslip => {
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="px-5 py-8 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                  </td>
+                </tr>
+              ) : payslips.map(payslip => {
                 const emp = payslip.employee;
+                if (!emp) return null;
                 const zusPracownik = payslip.zus.emerytalne_pracownik + payslip.zus.rentowe_pracownik + payslip.zus.chorobowe_pracownik;
                 const totalDeductions = zusPracownik + payslip.zus.zdrowotne + payslip.pitAdvance;
                 return (

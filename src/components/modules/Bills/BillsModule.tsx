@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, CheckCircle, AlertTriangle, Clock, X, AlertCircle, TrendingDown } from 'lucide-react';
-import { mockBills } from '../../../data/mockData';
+import { Plus, CheckCircle, AlertTriangle, Clock, X, AlertCircle, TrendingDown, Loader2 } from 'lucide-react';
+import { invoke } from '../../../lib/invoke';
 import type { Bill, BillStatus } from '../../../types';
 import clsx from 'clsx';
 
@@ -141,20 +141,42 @@ function AddBillModal({ onClose, onAdd }: AddBillModalProps) {
 
 export function BillsModule() {
   const { t } = useTranslation();
-  const [bills, setBills] = useState<Bill[]>(mockBills);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
+  const fetchBills = () => {
+    invoke<Bill[]>('get_bills').then(data => {
+      setBills(data ?? []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchBills(); }, []);
+
   const handleMarkPaid = (id: string) => {
-    setBills(prev => prev.map(b => b.id === id ? {
-      ...b,
-      status: 'oplacona' as BillStatus,
-      paidDate: new Date().toISOString().split('T')[0],
-    } : b));
+    invoke('mark_bill_paid', { id, paid_date: new Date().toISOString().split('T')[0] }).then(() => {
+      setBills(prev => prev.map(b => b.id === id ? {
+        ...b,
+        status: 'oplacona' as BillStatus,
+        paidDate: new Date().toISOString().split('T')[0],
+      } : b));
+    });
   };
 
   const handleAddBill = (bill: Bill) => {
-    setBills(prev => [bill, ...prev]);
+    invoke('upsert_bill', {
+      vendor: bill.vendor,
+      invoice_number: bill.invoiceNumber,
+      description: bill.description,
+      amount: bill.amount,
+      vat_amount: bill.vatAmount,
+      issue_date: bill.issueDate,
+      due_date: bill.dueDate,
+      category: bill.category,
+      notes: bill.notes,
+    }).then(() => fetchBills());
   };
 
   const filtered = filterStatus === 'all' ? bills : bills.filter(b => b.status === filterStatus);
@@ -240,7 +262,13 @@ export function BillsModule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {filtered.map(bill => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                  </td>
+                </tr>
+              ) : filtered.map(bill => (
                 <tr
                   key={bill.id}
                   className={clsx(

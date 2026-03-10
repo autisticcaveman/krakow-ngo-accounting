@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Users, Building2, Brain, Shield, Plus, Pencil, Trash2, Key,
@@ -6,11 +6,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLegalUpdates } from '../../../contexts/LegalUpdatesContext';
-import { mockOrganization } from '../../../data/mockData';
-import type { User, UserRole } from '../../../types';
+import { invoke } from '../../../lib/invoke';
+import type { User, UserRole, Organization } from '../../../types';
 import clsx from 'clsx';
 
 type SettingsTab = 'users' | 'organization' | 'ai' | 'legal';
+
+const defaultOrg: Organization = {
+  name: '', nip: '', krs: '', regon: '', address: '',
+  city: '', postalCode: '', country: 'Polska', email: '',
+  phone: '', bankAccount: '', bankName: '',
+};
 
 const OLLAMA_MODELS = [
   'deepseek-r1:7b',
@@ -118,8 +124,14 @@ export function SettingsModule() {
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [showEditModal, setShowEditModal] = useState(false);
   const [resetNotice, setResetNotice] = useState('');
-  const [orgForm, setOrgForm] = useState({ ...mockOrganization });
+  const [orgForm, setOrgForm] = useState<Organization>({ ...defaultOrg });
   const [orgSaved, setOrgSaved] = useState(false);
+
+  useEffect(() => {
+    invoke<Organization>('get_organization').then(data => {
+      if (data) setOrgForm(data);
+    }).catch(() => {});
+  }, []);
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [ollamaModel, setOllamaModel] = useState('deepseek-r1:14b');
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected' | 'testing'>('unknown');
@@ -351,7 +363,12 @@ export function SettingsModule() {
           </div>
           <div className="flex items-center gap-3 mt-5">
             <button
-              onClick={() => { setOrgSaved(true); setTimeout(() => setOrgSaved(false), 3000); }}
+              onClick={() => {
+                invoke('save_organization', orgForm as unknown as Record<string, unknown>).then(() => {
+                  setOrgSaved(true);
+                  setTimeout(() => setOrgSaved(false), 3000);
+                }).catch(() => {});
+              }}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
               <Save className="w-4 h-4" />

@@ -127,7 +127,7 @@ export interface Invoice {
   dueDate: string;
   seller: InvoiceParty;
   buyer: InvoiceParty;
-  lineItems: InvoiceLineItem[];
+  items: InvoiceLineItem[];
   netTotal: number;
   vatTotal: number;
   grossTotal: number;

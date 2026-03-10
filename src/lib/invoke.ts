@@ -193,6 +193,20 @@ async function mockInvoke<T>(command: string, args?: Record<string, unknown>): P
     case 'dismiss_legal_update': return null as T;
     case 'apply_legal_update': return null as T;
 
+    // Dashboard
+    case 'get_dashboard_data': {
+      const { mockMonthlyData, mockExpensePieData, mockTransactions } = await import('../data/mockData');
+      return {
+        monthly: mockMonthlyData,
+        pie: mockExpensePieData,
+        transactions: mockTransactions,
+        total_income_ytd: 35800,
+        total_expenses_ytd: 26300,
+        pending_receipts: 2,
+        overdue_bills: 1,
+      } as T;
+    }
+
     default:
       console.warn(`[invoke] Unknown command in web mode: ${command}`);
       return null as T;

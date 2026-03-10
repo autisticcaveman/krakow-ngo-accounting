@@ -6,3 +6,4 @@ pub mod employees;
 pub mod payroll;
 pub mod settings;
 pub mod legal;
+pub mod dashboard;

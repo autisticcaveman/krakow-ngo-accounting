@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Upload, FileText, CheckCircle, Clock, XCircle, AlertCircle,
-  Brain, ChevronRight, Download, Filter, Search, Check, X
+  Brain, ChevronRight, Download, Filter, Search, Check, X, Loader2
 } from 'lucide-react';
-import { mockReceipts } from '../../../data/mockData';
+import { invoke } from '../../../lib/invoke';
 import type { Receipt, ReceiptStatus } from '../../../types';
 import clsx from 'clsx';
 
@@ -45,13 +45,21 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
 
 export function ReceiptsModule() {
   const { t } = useTranslation();
-  const [receipts, setReceipts] = useState<Receipt[]>(mockReceipts);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploadNotice, setUploadNotice] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    invoke<Receipt[]>('get_receipts').then(data => {
+      setReceipts(data ?? []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,13 +80,17 @@ export function ReceiptsModule() {
   };
 
   const handleApprove = (id: string) => {
-    setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'zatwierdzony' as ReceiptStatus } : r));
-    if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'zatwierdzony' } : null);
+    invoke('update_receipt_status', { id, status: 'zatwierdzony' }).then(() => {
+      setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'zatwierdzony' as ReceiptStatus } : r));
+      if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'zatwierdzony' } : null);
+    });
   };
 
   const handleReject = (id: string) => {
-    setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'odrzucony' as ReceiptStatus } : r));
-    if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'odrzucony' } : null);
+    invoke('update_receipt_status', { id, status: 'odrzucony' }).then(() => {
+      setReceipts(prev => prev.map(r => r.id === id ? { ...r, status: 'odrzucony' as ReceiptStatus } : r));
+      if (selectedReceipt?.id === id) setSelectedReceipt(prev => prev ? { ...prev, status: 'odrzucony' } : null);
+    });
   };
 
   const filtered = receipts.filter(r => {
@@ -175,7 +187,13 @@ export function ReceiptsModule() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filtered.map(receipt => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                    </td>
+                  </tr>
+                ) : filtered.map(receipt => (
                   <tr
                     key={receipt.id}
                     onClick={() => setSelectedReceipt(receipt)}

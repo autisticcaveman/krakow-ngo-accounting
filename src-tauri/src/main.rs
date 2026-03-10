@@ -58,6 +58,8 @@ fn main() {
             commands::legal::get_legal_updates,
             commands::legal::dismiss_legal_update,
             commands::legal::apply_legal_update,
+            // Dashboard
+            commands::dashboard::get_dashboard_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
