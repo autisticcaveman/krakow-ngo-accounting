@@ -42,6 +42,21 @@
 
 ---
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Dashboard](screenshots/01-dashboard.png) | ![Receipts](screenshots/02-receipts.png) |
+| **Dashboard** — KPI cards, cash flow chart, transactions | **Receipts** — drag-drop upload, OCR panel, AI classification |
+| ![Bills](screenshots/03-bills.png) | ![Invoicing](screenshots/04-invoicing.png) |
+| **Bills** — overdue tracking, mark paid, cash flow summary | **Invoicing** — Polish VAT format, NIP/KRS/REGON, KSeF-ready |
+| ![Payroll](screenshots/05-payroll.png) | ![Reports](screenshots/06-reports.png) |
+| **Payroll** — 2026 ZUS+PIT rates, payslip generator | **Reports** — 6 report types, CSV export, PDF print |
+| ![Settings](screenshots/07-settings.png) | |
+| **Settings** — user CRUD, roles, org details, Ollama config | |
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
