@@ -130,7 +130,12 @@ On first login with `admin`/`admin` in desktop mode, a prompt will require chang
 
 ## Polish Legal Compliance
 
-The app is built around the specific compliance requirements for Polish non-profits:
+The app is built around the specific compliance requirements for Polish non-profits: 
+I am not an accountant and this is based on the data available from the date of this posting, though there is an in app updater. it is up to you to verify this is the data you need.
+
+Zmiana podstawy wymiaru składek ZUS od 1 stycznia 2027. Wymagana aktualizacja stawek.
+Effective Date: 2027-01-01296 days until effective
+
 
 | Requirement | Coverage |
 |-------------|----------|
